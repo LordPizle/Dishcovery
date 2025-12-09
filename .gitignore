@@ -1,0 +1,16 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+
+# Models (optional to ignore)
+models/*.joblib
+
+# OS files
+.DS_Store
+
+# IDE/editor
+.vscode/
+.idea/
