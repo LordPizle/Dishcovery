@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Find Food Near You</title>
+    <script>
+        function getLocationAndSubmit() {
+            if (!navigator.geolocation) {
+                alert("Geolocation not supported");
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                document.getElementById("lat").value = pos.coords.latitude;
+                document.getElementById("lng").value = pos.coords.longitude;
+                document.getElementById("foodForm").submit();
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Find Food Near You</h1>
+
+    <form id="foodForm" method="POST">
+        <label>What are you craving?</label><br><br>
+        <input type="text" name="keyword" value="{{ keyword }}" placeholder="e.g. chicken, pizza, vegan">
+
+        <input type="hidden" id="lat" name="lat">
+        <input type="hidden" id="lng" name="lng">
+
+        <button type="button" onclick="getLocationAndSubmit()">Search Near Me</button>
+    </form>
+
+    {% if error %}
+        <p style="color:red;">{{ error }}</p>
+    {% endif %}
+
+    {% if results %}
+        <h2>Restaurants serving "{{ keyword }}" near you</h2>
+        <ul>
+            {% for r in results %}
+                <li>
+                    <strong>{{ r.name }}</strong><br>
+                    {{ r.address }}<br>
+                    ⭐ Rating: {{ r.rating }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <p><a href="/">Back to Home</a></p>
+</body>
+</html>
