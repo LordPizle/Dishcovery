@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <title>Find Food Near You</title>
     <script>
         function getLocationAndSubmit() {
@@ -13,6 +14,8 @@
                 document.getElementById("lat").value = pos.coords.latitude;
                 document.getElementById("lng").value = pos.coords.longitude;
                 document.getElementById("foodForm").submit();
+            }, function() {
+                alert("Could not get your location");
             });
         }
     </script>
@@ -22,7 +25,7 @@
 
     <form id="foodForm" method="POST">
         <label>What are you craving?</label><br><br>
-        <input type="text" name="keyword" value="{{ keyword }}" placeholder="e.g. chicken, pizza, vegan">
+        <input type="text" name="keyword" value="{{ keyword }}" placeholder="e.g. chicken, pizza, vegan" required>
 
         <input type="hidden" id="lat" name="lat">
         <input type="hidden" id="lng" name="lng">
@@ -35,16 +38,26 @@
     {% endif %}
 
     {% if results %}
-        <h2>Restaurants serving "{{ keyword }}" near you</h2>
-        <ul>
+        <h2>Restaurants serving "{{ keyword }}" near you:</h2>
+        <div class="card-container">
             {% for r in results %}
-                <li>
-                    <strong>{{ r.name }}</strong><br>
-                    {{ r.address }}<br>
-                    ⭐ Rating: {{ r.rating }}
-                </li>
+            <div class="card">
+
+                {% if r.photo_url %}
+                    <img src="{{ r.photo_url }}" alt="{{ r.name }}">
+                {% else %}
+                    <img src="https://via.placeholder.com/400x250?text=No+Image" alt="No image">
+                {% endif %}
+
+                <div class="card-content">
+                    <h3>{{ r.name }}</h3>
+                    <p>{{ r.address }}</p>
+                    <p>⭐ {{ r.rating }}</p>
+                </div>
+
+            </div>
             {% endfor %}
-        </ul>
+        </div>
     {% endif %}
 
     <p><a href="/">Back to Home</a></p>
