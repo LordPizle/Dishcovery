@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Find Food Near You</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
     <script>
         function getLocationAndSubmit() {
             if (!navigator.geolocation) {

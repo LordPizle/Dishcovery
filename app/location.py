@@ -5,7 +5,7 @@ GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")
 
 
 def get_photo_url(photo_reference, max_width=400):
-    
+
     if not photo_reference:
         return None
 
@@ -20,7 +20,7 @@ def get_photo_url(photo_reference, max_width=400):
 def search_nearby_restaurants(lat, lng, keyword):
 
     if not GOOGLE_PLACES_API_KEY:
-        return {"error": "Missing Google Places API key"}
+        return {"error": "Google Places API key not found. Set the environment variable."}
 
     url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
 
@@ -37,7 +37,7 @@ def search_nearby_restaurants(lat, lng, keyword):
     restaurants = []
 
     for place in data.get("results", []):
-        
+
         photo_ref = None
         if "photos" in place:
             photo_ref = place["photos"][0].get("photo_reference")
@@ -49,7 +49,7 @@ def search_nearby_restaurants(lat, lng, keyword):
             "address": place.get("formatted_address"),
             "rating": place.get("rating"),
             "types": place.get("types"),
-            "photo_url": photo_url,
+            "photo_url": photo_url
         })
 
     return restaurants
