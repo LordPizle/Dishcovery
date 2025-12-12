@@ -56,6 +56,14 @@
                     <h3>{{ r.name }}</h3>
                     <p>{{ r.address }}</p>
                     <p>⭐ {{ r.rating }}</p>
+
+                    {% if r.open_now is not none %}
+                        {% if r.open_now %}
+                            <p>🟢 Open now</p>
+                        {% else %}
+                            <p>🔴 Closed</p>
+                        {% endif %}
+                    {% endif %}
                 </div>
 
             </div>

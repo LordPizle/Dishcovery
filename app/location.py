@@ -43,13 +43,16 @@ def search_nearby_restaurants(lat, lng, keyword):
             photo_ref = place["photos"][0].get("photo_reference")
 
         photo_url = get_photo_url(photo_ref)
+        opening_hours = place.get("opening_hours", {})
+        open_now = opening_hours.get("open_now")
 
         restaurants.append({
             "name": place.get("name"),
             "address": place.get("formatted_address"),
             "rating": place.get("rating"),
             "types": place.get("types"),
-            "photo_url": photo_url
+            "photo_url": photo_url,
+            "open_now": open_now,
         })
 
     return restaurants
