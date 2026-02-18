@@ -13,17 +13,31 @@
                 return;
             }
 
+            const button = document.getElementById("search-btn");
+            button.disabled = true;
+            button.innerText = "Searching...";
+
+            document.getElementById("loading-overlay").style.display = "flex";
+
             navigator.geolocation.getCurrentPosition(function(pos) {
                 document.getElementById("lat").value = pos.coords.latitude;
                 document.getElementById("lng").value = pos.coords.longitude;
                 document.getElementById("foodForm").submit();
             }, function() {
                 alert("Could not get your location");
+                document.getElementById("loading-overlay").style.display = "none";
+                button.disabled = false;
+                button.innerText = "Search Near Me";
             });
         }
     </script>
 </head>
 <body>
+    <div id="loading-overlay">
+        <div class="loader-box">
+            <div class="spinner"></div>
+        </div>
+    </div>
     <h1>Find Food Near You</h1>
 
     <form id="foodForm" method="POST">
@@ -33,7 +47,7 @@
         <input type="hidden" id="lat" name="lat">
         <input type="hidden" id="lng" name="lng">
 
-        <button type="button" onclick="getLocationAndSubmit()">Search Near Me</button>
+        <button type="button" id="search-btn" onclick="getLocationAndSubmit()">Search Near Me</button>
     </form>
 
     {% if error %}
@@ -55,16 +69,20 @@
                 <div class="card-content">
                     <h3>{{ r.name }}</h3>
                     <p>{{ r.address }}</p>
+                    {% if r.rating %}
                     <p>⭐ {{ r.rating }}</p>
+                    {% endif %}
 
                     {% if r.open_now is not none %}
                         {% if r.open_now %}
-                            <p>🟢 Open now</p>
+                            <p style="color:green;">🟢 Open now</p>
                         {% else %}
-                            <p>🔴 Closed</p>
+                            <p style="color:red;">🔴 Closed</p>
                         {% endif %}
                     {% endif %}
+                    {% if r.distance_km %}
                     <p>📍 {{ r.distance_km }} km away</p>
+                    {% endif %}
                 </div>
 
             </div>
