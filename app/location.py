@@ -37,13 +37,39 @@ def get_photo_url(photo_reference, max_width=400):
         f"&key={GOOGLE_PLACES_API_KEY}"
     )
 
+def get_place_photos(place_id, max_photos=5):
+
+    if not GOOGLE_PLACES_API_KEY:
+        return []
+
+    details_url = "https://maps.googleapis.com/maps/api/place/details/json"
+
+    params = {
+        "place_id": place_id,
+        "fields": "photos",
+        "key": GOOGLE_PLACES_API_KEY,
+    }
+
+    resp = requests.get(details_url, params=params)
+    data = resp.json()
+
+    photos = data.get("result", {}).get("photos", [])
+    photo_urls = []
+
+    for photo in photos[:max_photos]:
+        ref = photo.get("photo_reference")
+        if ref:
+            photo_urls.append(get_photo_url(ref))
+
+    return photo_urls
+
 
 def search_nearby_restaurants(lat, lng, keyword):
 
     if not GOOGLE_PLACES_API_KEY:
         return {"error": "Google Places API key not found. Set the environment variable."}
 
-    url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+    textsearch_url = "https://maps.googleapis.com/maps/api/place/textsearch/json"
 
     params = {
         "query": f"{keyword} restaurant",
@@ -52,34 +78,32 @@ def search_nearby_restaurants(lat, lng, keyword):
         "key": GOOGLE_PLACES_API_KEY
     }
 
-    response = requests.get(url, params=params)
+    response = requests.get(textsearch_url, params=params)
     data = response.json()
 
     restaurants = []
 
-    for place in data.get("results", []):
+    for place in data.get("results", [])[:10]:
 
-        photo_ref = None
-        if "photos" in place:
-            photo_ref = place["photos"][0].get("photo_reference")
+        place_id = place.get("place_id")
 
-        photo_url = get_photo_url(photo_ref)
-        opening_hours = place.get("opening_hours", {})
-        open_now = opening_hours.get("open_now")
+        photo_urls = get_place_photos(place_id, max_photos=5)
+        while len(photo_urls) < 2:
+            if photo_urls:
+                photo_urls.append(photo_urls[-1])
+            else:
+                photo_urls.append(None)
 
-        place_lat = place["geometry"]["location"]["lat"]
-        place_lng = place["geometry"]["location"]["lng"]
-
-        distance_km = haversine_distance(lat, lng, place_lat, place_lng)
-
-        restaurants.append({
+        restaurant = {
             "name": place.get("name"),
             "address": place.get("formatted_address"),
             "rating": place.get("rating"),
             "types": place.get("types"),
-            "photo_url": photo_url,
-            "open_now": open_now,
-            "distance_km": distance_km   
-        })
+            "open_now": place.get("opening_hours", {}).get("open_now"),
+            "distance_km": None,
+            "photo_urls": photo_urls,
+        }
+
+        restaurants.append(restaurant)
 
     return restaurants

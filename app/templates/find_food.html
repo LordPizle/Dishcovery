@@ -60,11 +60,30 @@
             {% for r in results %}
             <div class="card">
 
-                {% if r.photo_url %}
-                    <img src="{{ r.photo_url }}" alt="{{ r.name }}">
+            <div class="photo-row">
+                {% if r.photo_urls %}
+                    {% for url in r.photo_urls %}
+                        {% if url %}
+                            <img 
+                                src="{{ url }}" 
+                                alt="{{ r.name }}"
+                                style="width: 110px; height: 110px; object-fit: cover; border-radius: 8px; flex-shrink: 0; border: 1px solid #ddd; display: block;"
+                            >
+                        {% else %}
+                            <img 
+                                src="https://via.placeholder.com/400x250?text=No+Image" 
+                                alt="No image"
+                                style="width: 110px; height: 110px; object-fit: cover; border-radius: 8px; flex-shrink: 0; border: 1px solid #ddd; display: block;"
+                            >
+                        {% endif %}
+                    {% endfor %}
                 {% else %}
-                    <img src="https://via.placeholder.com/400x250?text=No+Image" alt="No image">
+                    <img src="https://via.placeholder.com/400x250?text=No+Image" 
+                        alt="No image"
+                        style="width: 110px; height: 110px; object-fit: cover; border-radius: 8px; flex-shrink: 0; border: 1px solid #ddd; display: block;"
+                    >
                 {% endif %}
+            </div>
 
                 <div class="card-content">
                     <h3>{{ r.name }}</h3>
