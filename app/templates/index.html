@@ -1,12 +1,36 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Dishcovery</title>
-</head>
-<body>
-    <h1>Welcome to Dishcovery</h1>
-    <p>Your AI-powered food recommendation system is coming soon!</p>
-    <p><a href="/find-food">Find restaurants near me</a></p>
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block title %}Dishcovery - AI-Powered Food Recommendations{% endblock %}
+{% block meta_description %}Find great food near you. Dishcovery is your AI-powered food recommendation app. Tell us what you crave and we'll show you the best restaurants around.{% endblock %}
+{% block og_title %}Dishcovery - AI-Powered Food Recommendations{% endblock %}
+{% block og_description %}Find great food near you. Tell us what you crave and we'll show you the best restaurants around.{% endblock %}
+
+{% block content %}
+<div class="hero-wrapper">
+    <section class="hero hero-bg">
+        <div class="hero-inner">
+            <h1>Find great food <span>near you</span></h1>
+            <p class="subtitle">Tell us what you’re craving, we’ll show you the best restaurants around.</p>
+            <a href="/find-food" class="cta-button">Find Food Near Me</a>
+        </div>
+    </section>
+</div>
+
+<section class="features">
+    <div class="feature-card">
+        <span class="feature-icon">📍</span>
+        <h3>Location-based</h3>
+        <p>Uses your location or specified address to find restaurants nearby.</p>
+    </div>
+    <div class="feature-card">
+        <span class="feature-icon">🤖</span>
+        <h3>AI Assistant</h3>
+        <p>Chat with our AI for cuisine suggestions, dietary tips and food recommendations.</p>
+    </div>
+    <div class="feature-card">
+        <span class="feature-icon">✨</span>
+        <h3>Quick & Easy</h3>
+        <p>Search by dish or cuisine. Get results with photos, ratings and opening hours.</p>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{% block meta_description %}Dishcovery - AI-powered food recommendations. Discover restaurants near you based on what you crave.{% endblock %}">
+    <title>{% block title %}Dishcovery - AI Food Recommendations{% endblock %}</title>
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{% block og_title %}Dishcovery - AI Food Recommendations{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}AI-powered food recommendations. Discover restaurants near you based on what you crave.{% endblock %}">
+    {% block head_extra %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    <header class="site-header">
+        <div class="app-container">
+            <a href="/" class="logo">Dishcovery</a>
+            <nav class="nav-links">
+                <a href="/find-food" class="nav-link {% if request.endpoint == 'main.find_food' %}active{% endif %}">Find Food</a>
+                <a href="/about" class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}">About</a>
+                <a href="/find-food" class="nav-link primary">Get Started</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="app-container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="app-container">
+            <div class="footer-brand">Dishcovery</div>
+            <div class="footer-links">
+                <a href="/">Home</a>
+                <a href="/find-food">Find Food</a>
+                <a href="/about">About</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- AI Chat Widget -->
+    <div id="chat-widget">
+        <button id="chat-toggle" class="chat-toggle" aria-label="Open chat">
+            <span class="chat-icon">💬</span>
+        </button>
+        <div id="chat-panel" class="chat-panel hidden">
+            <div class="chat-header">
+                <h3>Dishcovery AI</h3>
+                <button id="chat-close" class="chat-close" aria-label="Close chat">&times;</button>
+            </div>
+            <div id="chat-messages" class="chat-messages"></div>
+            <div class="chat-input-wrap">
+                <input type="text" id="chat-input" placeholder="Ask about food, cuisines, diets..." maxlength="500" autocomplete="off">
+                <button id="chat-send" class="chat-send" aria-label="Send">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

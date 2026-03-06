@@ -1,114 +1,258 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Find Food Near You</title>
+{% extends "base.html" %}
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% block title %}Find Food Near You - Dishcovery{% endblock %}
+{% block meta_description %}Search restaurants by dish or cuisine. Enter what you're craving and your location to find the best spots near you.{% endblock %}
+{% block og_title %}Find Food Near You - Dishcovery{% endblock %}
+{% block og_description %}Search restaurants by dish or cuisine. Enter what you're craving and your location to find the best spots near you.{% endblock %}
+{% block body_class %}find-food-page{% endblock %}
 
-    <script>
-        function getLocationAndSubmit() {
-            if (!navigator.geolocation) {
-                alert("Geolocation not supported");
-                return;
-            }
+{% block content %}
+{% if error %}
+    <div class="alert alert-error" role="alert">{{ error }}</div>
+{% endif %}
 
-            const button = document.getElementById("search-btn");
-            button.disabled = true;
-            button.innerText = "Searching...";
+<h1 class="page-title">Find Food Near You</h1>
+<p class="page-subtitle">What are you craving? Enter a dish or cuisine, then choose a location to search near.</p>
 
-            document.getElementById("loading-overlay").style.display = "flex";
-
-            navigator.geolocation.getCurrentPosition(function(pos) {
-                document.getElementById("lat").value = pos.coords.latitude;
-                document.getElementById("lng").value = pos.coords.longitude;
-                document.getElementById("foodForm").submit();
-            }, function() {
-                alert("Could not get your location");
-                document.getElementById("loading-overlay").style.display = "none";
-                button.disabled = false;
-                button.innerText = "Search Near Me";
-            });
-        }
-    </script>
-</head>
-<body>
-    <div id="loading-overlay">
-        <div class="loader-box">
-            <div class="spinner"></div>
+<form id="foodForm" method="POST" class="form-card">
+    <label for="keyword">What are you craving?</label>
+    <input type="text" id="keyword" name="keyword" value="{{ keyword }}" placeholder="e.g. pizza, sushi, vegan, tacos" required>
+    <div class="location-section">
+        <label>Where to search?</label>
+        <div class="location-options">
+            <label class="location-option">
+                <input type="radio" name="location_type" value="address" {% if not use_current %}checked{% endif %}>
+                <span>Enter address</span>
+            </label>
+            <label class="location-option">
+                <input type="radio" name="location_type" value="current" {% if use_current %}checked{% endif %}>
+                <span>Use my current location</span>
+            </label>
+        </div>
+        <div id="address-wrap" class="address-wrap">
+            <input type="text" id="address" name="address" value="{{ address }}" placeholder="Type an address (e.g. London, Oxford Street)" autocomplete="off">
+            <div id="address-dropdown" class="address-dropdown"></div>
+            <p class="address-hint">Type 2+ characters, then select from the list</p>
         </div>
     </div>
-    <h1>Find Food Near You</h1>
+    <button type="button" id="filter-toggle" class="filter-toggle" aria-expanded="false">
+        <span class="filter-toggle-icon">⚙</span> Filters
+    </button>
+    <div id="filter-panel" class="filter-panel hidden">
+        <div class="filter-group">
+            <label for="distance">Max distance (km)</label>
+            <select id="distance" name="distance">
+                {% for d in [1, 2, 3, 5, 10, 15, 20] %}
+                <option value="{{ d }}" {% if (distance | default(5)) == d %}selected{% endif %}>{{ d }} km</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="count">Number of restaurants</label>
+            <select id="count" name="count">
+                {% for c in [5, 10, 15, 20] %}
+                <option value="{{ c }}" {% if (count | default(10)) == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <input type="hidden" id="lat" name="lat">
+    <input type="hidden" id="lng" name="lng">
+    <input type="hidden" id="use_current" name="use_current" value="0">
+    <button type="submit" id="search-btn" class="search-btn">Search</button>
+</form>
 
-    <form id="foodForm" method="POST">
-        <label>What are you craving?</label><br><br>
-        <input type="text" name="keyword" value="{{ keyword }}" placeholder="e.g. chicken, pizza, vegan" required>
-
-        <input type="hidden" id="lat" name="lat">
-        <input type="hidden" id="lng" name="lng">
-
-        <button type="button" id="search-btn" onclick="getLocationAndSubmit()">Search Near Me</button>
-    </form>
-
-    {% if error %}
-        <p style="color:red;">{{ error }}</p>
-    {% endif %}
-
-    {% if results %}
-        <h2>Restaurants serving "{{ keyword }}" near you:</h2>
-        <div class="card-container">
-            {% for r in results %}
-            <div class="card">
-
+{% if results %}
+    <h2 class="results-header">Restaurants serving "{{ keyword }}" near you</h2>
+    <div class="card-container">
+        {% for r in results %}
+        <div class="card">
             <div class="photo-row">
                 {% if r.photo_urls %}
                     {% for url in r.photo_urls %}
                         {% if url %}
-                            <img 
-                                src="{{ url }}" 
-                                alt="{{ r.name }}"
-                                style="width: 110px; height: 110px; object-fit: cover; border-radius: 8px; flex-shrink: 0; border: 1px solid #ddd; display: block;"
-                            >
+                            <button type="button" class="photo-link" data-src="{{ url }}" data-alt="{{ r.name | e }}" aria-label="View full size"><img src="{{ url }}" alt="{{ r.name }}"></button>
                         {% else %}
-                            <img 
-                                src="https://via.placeholder.com/400x250?text=No+Image" 
-                                alt="No image"
-                                style="width: 110px; height: 110px; object-fit: cover; border-radius: 8px; flex-shrink: 0; border: 1px solid #ddd; display: block;"
-                            >
+                            <span class="photo-placeholder"><img src="https://via.placeholder.com/100?text=No+Image" alt="No image"></span>
                         {% endif %}
                     {% endfor %}
                 {% else %}
-                    <img src="https://via.placeholder.com/400x250?text=No+Image" 
-                        alt="No image"
-                        style="width: 110px; height: 110px; object-fit: cover; border-radius: 8px; flex-shrink: 0; border: 1px solid #ddd; display: block;"
-                    >
+                    <span class="photo-placeholder"><img src="https://via.placeholder.com/100?text=No+Image" alt="No image"></span>
                 {% endif %}
             </div>
-
-                <div class="card-content">
-                    <h3>{{ r.name }}</h3>
-                    <p>{{ r.address }}</p>
-                    {% if r.rating %}
-                    <p>⭐ {{ r.rating }}</p>
-                    {% endif %}
-
-                    {% if r.open_now is not none %}
-                        {% if r.open_now %}
-                            <p style="color:green;">🟢 Open now</p>
-                        {% else %}
-                            <p style="color:red;">🔴 Closed</p>
-                        {% endif %}
-                    {% endif %}
-                    {% if r.distance_km %}
-                    <p>📍 {{ r.distance_km }} km away</p>
-                    {% endif %}
-                </div>
-
+            <div class="card-content">
+                <h3 class="card-title">{{ r.name }}</h3>
+                <p class="card-meta">
+                    {% if r.rating %}<span class="card-rating">{{ r.rating }}</span><span class="card-star" aria-hidden="true">★</span>{% endif %}
+                    {% if r.user_ratings_total %}<span class="card-reviews">({{ "{:,}".format(r.user_ratings_total) }}{% if r.user_ratings_total >= 1000 %}+{% endif %})</span>{% endif %}
+                    {% if (r.rating or r.user_ratings_total) and (r.distance_km is not none or r.open_now is not none) %}<span class="card-sep" aria-hidden="true">•</span>{% endif %}
+                    {% if r.distance_km is not none %}<span class="card-distance">{{ r.distance_km }} km</span>{% endif %}
+                    {% if r.open_now is not none %}{% if r.distance_km is not none %}<span class="card-sep" aria-hidden="true">•</span>{% endif %}<span class="card-status {% if r.open_now %}open{% else %}closed{% endif %}">{% if r.open_now %}Open now{% else %}Closed{% endif %}</span>{% endif %}
+                </p>
+                <p class="card-address">{{ r.address }}</p>
+                {% if r.place_id %}
+                <a href="https://www.google.com/maps/place/?q=place_id:{{ r.place_id }}" target="_blank" rel="noopener" class="card-link">View on Maps →</a>
+                {% elif r.address %}
+                <a href="https://www.google.com/maps/search/?api=1&query={{ r.address | urlencode }}" target="_blank" rel="noopener" class="card-link">View on Maps →</a>
+                {% endif %}
             </div>
-            {% endfor %}
         </div>
-    {% endif %}
+        {% endfor %}
+    </div>
+{% elif request.method == 'POST' and not error %}
+    <div class="empty-state">
+        <span class="empty-icon">🔍</span>
+        <h3>No restaurants found</h3>
+        <p>Try a different keyword or check that location access is enabled.</p>
+    </div>
+{% endif %}
 
-    <p><a href="/">Back to Home</a></p>
-</body>
-</html>
+<a href="/" class="back-link">← Back to Home</a>
+
+<div id="lightbox" class="lightbox hidden" onclick="closeLightbox()" role="dialog" aria-modal="true" aria-label="Image preview">
+    <button type="button" class="lightbox-close" onclick="closeLightbox()" aria-label="Close">&times;</button>
+    <img id="lightbox-img" src="" alt="">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function initAddressAutocomplete() {
+    var input = document.getElementById('address');
+    var latInput = document.getElementById('lat');
+    var lngInput = document.getElementById('lng');
+    var dropdown = document.getElementById('address-dropdown');
+    if (!input || !latInput || !lngInput || !dropdown) return;
+    var timer;
+    var userLat = null, userLon = null;
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(p) { userLat = p.coords.latitude; userLon = p.coords.longitude; },
+            function() {},
+            { enableHighAccuracy: false, timeout: 3000, maximumAge: 300000 }
+        );
+    }
+    input.addEventListener('input', function() {
+        latInput.value = '';
+        lngInput.value = '';
+        var q = input.value.trim();
+        clearTimeout(timer);
+        dropdown.innerHTML = '';
+        dropdown.classList.remove('open');
+        if (q.length < 2) return;
+        timer = setTimeout(function() {
+            var url = '/api/address-search?q=' + encodeURIComponent(q);
+            if (userLat != null && userLon != null) {
+                url += '&lat=' + userLat + '&lon=' + userLon;
+            }
+            fetch(url)
+                .then(function(r) { return r.json(); })
+                .then(function(list) {
+                    dropdown.innerHTML = '';
+                    if (!Array.isArray(list) || list.length === 0) {
+                        dropdown.classList.remove('open');
+                        return;
+                    }
+                    list.forEach(function(item) {
+                        var div = document.createElement('div');
+                        div.className = 'address-suggestion';
+                        div.setAttribute('role', 'option');
+                        div.setAttribute('tabindex', '0');
+                        div.textContent = item.display || (item.lat + ', ' + item.lng);
+                        function selectItem() {
+                            input.value = item.display || '';
+                            latInput.value = item.lat;
+                            lngInput.value = item.lng;
+                            dropdown.classList.remove('open');
+                            dropdown.innerHTML = '';
+                        }
+                        div.addEventListener('mousedown', function(e) { e.preventDefault(); });
+                        div.addEventListener('click', selectItem);
+                        div.addEventListener('keydown', function(e) {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                selectItem();
+                            }
+                        });
+                        dropdown.appendChild(div);
+                    });
+                    dropdown.classList.add('open');
+                })
+                .catch(function() {
+                    dropdown.classList.remove('open');
+                });
+        }, 400);
+    });
+    input.addEventListener('blur', function() {
+        setTimeout(function() { dropdown.classList.remove('open'); }, 200);
+    });
+})();
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.photo-link[data-src]');
+    if (btn) {
+        e.preventDefault();
+        openLightbox(btn.dataset.src, btn.dataset.alt || '');
+    }
+});
+function openLightbox(src, alt) {
+    var lb = document.getElementById('lightbox');
+    var img = document.getElementById('lightbox-img');
+    img.src = src;
+    img.alt = alt;
+    lb.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+    document.getElementById('lightbox').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeLightbox(); });
+document.getElementById('foodForm').addEventListener('submit', function(e) {
+    var useCurrent = document.querySelector('input[name="location_type"]:checked').value === 'current';
+    document.getElementById('use_current').value = useCurrent ? '1' : '0';
+    var btn = document.getElementById("search-btn");
+    if (useCurrent) {
+        e.preventDefault();
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser.");
+            return;
+        }
+        btn.disabled = true;
+        btn.textContent = "Getting location...";
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                document.getElementById("lat").value = pos.coords.latitude;
+                document.getElementById("lng").value = pos.coords.longitude;
+                btn.textContent = "Searching...";
+                document.getElementById("foodForm").submit();
+            },
+            function() {
+                alert("Could not get your location. Please enable location access or enter an address.");
+                btn.disabled = false;
+                btn.textContent = "Search";
+            }
+        );
+    } else {
+        e.preventDefault();
+        btn.disabled = true;
+        btn.textContent = "Searching...";
+        document.getElementById("foodForm").submit();
+    }
+});
+document.querySelectorAll('input[name="location_type"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        var wrap = document.getElementById('address-wrap');
+        wrap.style.display = this.value === 'address' ? 'block' : 'none';
+    });
+});
+var locType = document.querySelector('input[name="location_type"]:checked');
+if (locType && locType.value === 'current') {
+    document.getElementById('address-wrap').style.display = 'none';
+}
+document.getElementById('filter-toggle').addEventListener('click', function() {
+    var panel = document.getElementById('filter-panel');
+    panel.classList.toggle('hidden');
+    this.setAttribute('aria-expanded', !panel.classList.contains('hidden'));
+});
+</script>
+{% endblock %}

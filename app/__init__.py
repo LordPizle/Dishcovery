@@ -1,7 +1,9 @@
+import os
 from flask import Flask
 
 def create_app():
-    app = Flask(__name__)
+    static_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+    app = Flask(__name__, static_folder=static_path)
 
     from .routes import main_bp
     app.register_blueprint(main_bp)
