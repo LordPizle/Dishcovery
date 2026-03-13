@@ -12,7 +12,7 @@
 
   if (!toggle || !panel || !messages) return;
 
-  var WELCOME = "Hi! I'm your Dishcovery food assistant. Ask me about cuisines, dishes or diets. Or use Find Food to search restaurants near you!";
+  var WELCOME = "Hi! I'm your Dishcovery food assistant. Ask me about cuisines, dishes, diets or places near you. Say things like 'cheap sushi near me' and I'll suggest nearby restaurants using your location.";
 
   function showPanel() {
     panel.classList.remove('hidden');
@@ -42,23 +42,45 @@
     input.disabled = true;
     send.disabled = true;
 
-    fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text })
-    })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        addMessage(data.reply || 'Something went wrong.', false);
+    function doSend(lat, lng) {
+      var payload = { message: text };
+      if (typeof lat === 'number' && typeof lng === 'number') {
+        payload.lat = lat;
+        payload.lng = lng;
+      }
+
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       })
-      .catch(function() {
-        addMessage('Could not reach the server. Please try again.', false);
-      })
-      .finally(function() {
-        input.disabled = false;
-        send.disabled = false;
-        input.focus();
-      });
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          addMessage(data.reply || 'Something went wrong.', false);
+        })
+        .catch(function() {
+          addMessage('Could not reach the server. Please try again.', false);
+        })
+        .finally(function() {
+          input.disabled = false;
+          send.disabled = false;
+          input.focus();
+        });
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          doSend(pos.coords.latitude, pos.coords.longitude);
+        },
+        function() {
+          doSend();
+        },
+        { timeout: 7000 }
+      );
+    } else {
+      doSend();
+    }
   }
 
   function initChat() {

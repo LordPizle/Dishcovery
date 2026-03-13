@@ -858,6 +858,7 @@ body > main {
 
 .chat-msg p {
   margin: 0;
+  white-space: pre-line;
 }
 
 .chat-input-wrap {

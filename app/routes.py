@@ -131,10 +131,91 @@ def address_search():
 
 @main_bp.route("/api/chat", methods=["POST"])
 def api_chat():
-    data = request.get_json()
+    data = request.get_json() or {}
     message = (data.get("message", "") or "").strip()
     if not message:
         return jsonify({"reply": "Please type a message!"})
+
+    text = message.lower()
+    lat = data.get("lat")
+    lng = data.get("lng")
+
+    # If we have location and the user clearly wants places near them,
+    # call the restaurant search and answer with concrete suggestions.
+    if lat is not None and lng is not None:
+        try:
+            lat_f = float(lat)
+            lng_f = float(lng)
+        except (TypeError, ValueError):
+            lat_f = None
+            lng_f = None
+
+        if lat_f is not None and lng_f is not None:
+            wants_nearby = bool(
+                ("near me" in text)
+                or ("around me" in text)
+                or ("nearby" in text)
+                or ("close by" in text)
+                or ("food near me" in text)
+                or ("restaurants near me" in text)
+                or ("where to eat" in text)
+            )
+
+            if wants_nearby:
+                from .location import search_nearby_restaurants
+
+                results = search_nearby_restaurants(lat_f, lng_f, message, radius_km=5, limit=5)
+
+                if isinstance(results, dict) and "error" in results:
+                    reply = (
+                        results["error"]
+                        + " You can also try the Find Food page with your craving and location."
+                    )
+                    return jsonify({"reply": reply})
+
+                if results:
+                    lines = ["Here are a few places near you:"]
+                    for idx, r in enumerate(results[:3], start=1):
+                        name = r.get("name") or "Unnamed place"
+                        rating = r.get("rating")
+                        total = r.get("user_ratings_total")
+                        dist = r.get("distance_km")
+                        addr = r.get("address")
+
+                        parts = [f"{idx}. {name}"]
+
+                        rating_bits = []
+                        if rating is not None:
+                            rating_bits.append(f"{rating}★")
+                        if total:
+                            rating_bits.append(f"{total} reviews")
+                        if rating_bits:
+                            parts.append(", ".join(rating_bits))
+
+                        if dist is not None:
+                            parts.append(f"{dist} km away")
+
+                        if addr:
+                            parts.append(addr)
+
+                        # One short paragraph per restaurant, followed by a blank line
+                        lines.append(" ".join(parts))
+                        lines.append("")
+
+                    lines.append(
+                        "For more options and photos, open the Find Food page and search with a similar craving and your location."
+                    )
+                    reply = "\n".join(lines)
+                    return jsonify({"reply": reply})
+
+                # No results but everything else worked
+                reply = (
+                    "I could not find any restaurants near you for that query. "
+                    "Try a broader craving or different cuisine in the Find Food page."
+                )
+                return jsonify({"reply": reply})
+
+    # Fallback to the keyword-based AI helper
     reply = get_ai_response(message)
     return jsonify({"reply": reply})
 
