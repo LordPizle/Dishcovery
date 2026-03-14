@@ -9,6 +9,8 @@
   var input = document.getElementById('chat-input');
   var send = document.getElementById('chat-send');
   var messages = document.getElementById('chat-messages');
+  var pendingBotMessage = null;
+  var typingStartTime = 0;
 
   if (!toggle || !panel || !messages) return;
 
@@ -23,24 +25,37 @@
     panel.classList.add('hidden');
   }
 
-  function addMessage(text, isUser) {
+  function addMessage(text, isUser, isHtml, extraClass) {
     var div = document.createElement('div');
-    div.className = 'chat-msg' + (isUser ? ' chat-msg-user' : '');
+    var cls = 'chat-msg' + (isUser ? ' chat-msg-user' : '');
+    if (extraClass) {
+      cls += ' ' + extraClass;
+    }
+    div.className = cls;
     var p = document.createElement('p');
-    p.textContent = text;
+    if (isHtml) {
+      p.innerHTML = text;
+    } else {
+      p.textContent = text;
+    }
     div.appendChild(p);
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
+    return div;
   }
 
   function sendMessage() {
     var text = (input.value || '').trim();
     if (!text) return;
 
-    addMessage(text, true);
+    addMessage(text, true, false);
     input.value = '';
     input.disabled = true;
     send.disabled = true;
+
+    // Show typing bubble immediately; keep at least 2 seconds before swapping to reply.
+    typingStartTime = Date.now();
+    pendingBotMessage = addMessage('Typing...', false, false, 'chat-msg-typing');
 
     function doSend(lat, lng) {
       var payload = { message: text };
@@ -48,6 +63,8 @@
         payload.lat = lat;
         payload.lng = lng;
       }
+      
+      var thisTypingBubble = pendingBotMessage;
 
       fetch('/api/chat', {
         method: 'POST',
@@ -56,10 +73,36 @@
       })
         .then(function(r) { return r.json(); })
         .then(function(data) {
-          addMessage(data.reply || 'Something went wrong.', false);
+          var reply = data.reply || 'Something went wrong.';
+          var elapsed = Date.now() - typingStartTime;
+          var update = function() {
+            if (thisTypingBubble && thisTypingBubble.parentNode) {
+              thisTypingBubble.parentNode.removeChild(thisTypingBubble);
+            }
+            pendingBotMessage = null;
+            addMessage(reply, false, true);
+          };
+          if (elapsed < 2000) {
+            setTimeout(update, 2000 - elapsed);
+          } else {
+            update();
+          }
         })
         .catch(function() {
-          addMessage('Could not reach the server. Please try again.', false);
+          var msg = 'Could not reach the server. Please try again.';
+          var elapsed = Date.now() - typingStartTime;
+          var update = function() {
+            if (thisTypingBubble && thisTypingBubble.parentNode) {
+              thisTypingBubble.parentNode.removeChild(thisTypingBubble);
+            }
+            pendingBotMessage = null;
+            addMessage(msg, false, false);
+          };
+          if (elapsed < 2000) {
+            setTimeout(update, 2000 - elapsed);
+          } else {
+            update();
+          }
         })
         .finally(function() {
           input.disabled = false;
@@ -85,7 +128,7 @@
 
   function initChat() {
     if (messages.children.length === 0) {
-      addMessage(WELCOME, false);
+      addMessage(WELCOME, false, false);
     }
   }
 

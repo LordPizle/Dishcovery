@@ -1,5 +1,7 @@
+import re
 import requests
-from flask import Blueprint, render_template, request, jsonify
+from urllib.parse import urlencode
+from flask import Blueprint, render_template, request, jsonify, session
 from .location import search_nearby_restaurants, geocode_address
 from .chat import get_ai_response
 
@@ -18,48 +20,88 @@ def find_food():
     error = None
     distance = 5
     count = 10
+    min_rating = None
+    open_now_only = False
     address = ""
     use_current = False
 
+    lat = None
+    lng = None
+
+    def _parse_filters(source):
+        nonlocal distance, count, min_rating, open_now_only
+        try:
+            distance = max(1, min(20, int(source.get("distance", distance) or distance)))
+        except (ValueError, TypeError):
+            pass
+        try:
+            count = max(1, min(20, int(source.get("count", count) or count)))
+        except (ValueError, TypeError):
+            pass
+        mr = source.get("min_rating")
+        if mr not in (None, "", "any"):
+            try:
+                min_rating = float(mr)
+            except (ValueError, TypeError):
+                min_rating = None
+        ono = source.get("open_now_only")
+        open_now_only = bool(str(ono) == "1" or ono is True)
+
     if request.method == "POST":
-        keyword = (request.form.get("keyword") or "").strip()
-        use_current = request.form.get("use_current") == "1"
-        address = (request.form.get("address") or "").strip()
-        lat = request.form.get("lat")
-        lng = request.form.get("lng")
-        try:
-            distance = max(1, min(20, int(request.form.get("distance", 5) or 5)))
-        except (ValueError, TypeError):
-            pass
-        try:
-            count = max(1, min(20, int(request.form.get("count", 10) or 10)))
-        except (ValueError, TypeError):
-            pass
+        form = request.form
+        keyword = (form.get("keyword") or "").strip()
+        use_current = form.get("use_current") == "1"
+        address = (form.get("address") or "").strip()
+        lat = form.get("lat")
+        lng = form.get("lng")
+        _parse_filters(form)
 
         if not keyword:
             error = "Please enter what you're craving."
         elif use_current and lat and lng:
-            results = search_nearby_restaurants(lat, lng, keyword, radius_km=distance, limit=count)
-            if isinstance(results, dict) and "error" in results:
-                error = results["error"]
-                results = None
+            results = search_nearby_restaurants(lat, lng, keyword, radius_km=distance, limit=count, min_rating=min_rating, open_now_only=open_now_only)
         elif lat and lng:
-            results = search_nearby_restaurants(lat, lng, keyword, radius_km=distance, limit=count)
-            if isinstance(results, dict) and "error" in results:
-                error = results["error"]
-                results = None
+            results = search_nearby_restaurants(lat, lng, keyword, radius_km=distance, limit=count, min_rating=min_rating, open_now_only=open_now_only)
         elif address:
             coords = geocode_address(address)
             if coords:
                 lat, lng = coords
-                results = search_nearby_restaurants(lat, lng, keyword, radius_km=distance, limit=count)
-                if isinstance(results, dict) and "error" in results:
-                    error = results["error"]
-                    results = None
+                results = search_nearby_restaurants(lat, lng, keyword, radius_km=distance, limit=count, min_rating=min_rating, open_now_only=open_now_only)
             else:
                 error = "Could not find that address. Please check and try again."
         else:
             error = "Please enter an address or use your current location."
+
+        if isinstance(results, dict) and results is not None and "error" in results:
+            error = results["error"]
+            results = None
+
+    else:
+        args = request.args
+        keyword = (args.get("keyword") or "").strip()
+        address = (args.get("address") or "").strip()
+        lat = args.get("lat")
+        lng = args.get("lng")
+        _parse_filters(args)
+
+        if keyword and lat and lng:
+            results = search_nearby_restaurants(lat, lng, keyword, radius_km=distance, limit=count, min_rating=min_rating, open_now_only=open_now_only)
+            use_current = True
+            if isinstance(results, dict) and "error" in results:
+                error = results["error"]
+                results = None
+
+    # Stores the last search in the session
+    if results and not isinstance(results, dict) and lat is not None and lng is not None:
+        try:
+            session["last_search"] = {
+                "lat": float(lat),
+                "lng": float(lng),
+                "keyword": keyword,
+                "distance": distance,
+            }
+        except (TypeError, ValueError):
+            session.pop("last_search", None)
 
     return render_template(
         "find_food.html",
@@ -68,6 +110,8 @@ def find_food():
         error=error,
         distance=distance,
         count=count,
+        min_rating=min_rating,
+        open_now_only=open_now_only,
         address=address,
         use_current=use_current,
     )
@@ -140,8 +184,84 @@ def api_chat():
     lat = data.get("lat")
     lng = data.get("lng")
 
-    # If we have location and the user clearly wants places near them,
-    # call the restaurant search and answer with concrete suggestions.
+    def format_restaurant_reply(results, header_line, keyword, lat_val, lng_val):
+        if not results:
+            return (
+                "I could not find any restaurants for that query. "
+                "Try a broader craving or different cuisine in the Find Food page."
+            )
+
+        lines = [header_line]
+        for idx, r in enumerate(results[:3], start=1):
+            name = r.get("name") or "Unnamed place"
+            rating = r.get("rating")
+            total = r.get("user_ratings_total")
+            dist = r.get("distance_km")
+            addr = r.get("address")
+
+            parts = [f"{idx}. {name}"]
+
+            rating_bits = []
+            if rating is not None:
+                rating_bits.append(f"{rating}★")
+            if total:
+                rating_bits.append(f"{total} reviews")
+            if rating_bits:
+                parts.append(", ".join(rating_bits))
+
+            if dist is not None:
+                parts.append(f"{dist} km away")
+
+            if addr:
+                parts.append(addr)
+
+            # One short paragraph per restaurant, followed by a blank line
+            lines.append(" ".join(parts))
+            lines.append("")
+
+        qs = urlencode(
+            {
+                "keyword": keyword,
+                "lat": lat_val,
+                "lng": lng_val,
+                "distance": 5,
+            }
+        )
+        lines.append(
+            f'View these on a map: <a href="/find-food?{qs}" target="_blank" rel="noopener">Open in Find Food</a>'
+        )
+        lines.append(
+            "For more variety, you can also try a slightly broader search term on the Find Food page."
+        )
+        return "\n".join(lines)
+
+    def search_and_reply(lat_val, lng_val, search_keyword, header_line):
+        results = search_nearby_restaurants(lat_val, lng_val, search_keyword, radius_km=5, limit=5)
+        if isinstance(results, dict) and "error" in results:
+            return (
+                results["error"]
+                + " You can also try the Find Food page with your craving and location."
+            )
+        return format_restaurant_reply(results, header_line, search_keyword, lat_val, lng_val)
+
+    # If the user is searching for a city, search for restaurants in that city
+    city_match = re.search(r"(.+?)\s+in\s+([a-zA-Z\s,]+)$", text)
+    if city_match:
+        food_part = city_match.group(1).strip()
+        place_part = city_match.group(2).strip().strip(".")
+        coords = geocode_address(place_part)
+        if coords:
+            lat_city, lng_city = coords
+            keyword = food_part or message
+            header = f"Here are a few places in {place_part}:"
+            reply = search_and_reply(lat_city, lng_city, keyword, header)
+            return jsonify({"reply": reply})
+
+    if lat is None or lng is None:
+        last = session.get("last_search") or {}
+        lat = last.get("lat")
+        lng = last.get("lng")
+
     if lat is not None and lng is not None:
         try:
             lat_f = float(lat)
@@ -162,57 +282,9 @@ def api_chat():
             )
 
             if wants_nearby:
-                from .location import search_nearby_restaurants
-
-                results = search_nearby_restaurants(lat_f, lng_f, message, radius_km=5, limit=5)
-
-                if isinstance(results, dict) and "error" in results:
-                    reply = (
-                        results["error"]
-                        + " You can also try the Find Food page with your craving and location."
-                    )
-                    return jsonify({"reply": reply})
-
-                if results:
-                    lines = ["Here are a few places near you:"]
-                    for idx, r in enumerate(results[:3], start=1):
-                        name = r.get("name") or "Unnamed place"
-                        rating = r.get("rating")
-                        total = r.get("user_ratings_total")
-                        dist = r.get("distance_km")
-                        addr = r.get("address")
-
-                        parts = [f"{idx}. {name}"]
-
-                        rating_bits = []
-                        if rating is not None:
-                            rating_bits.append(f"{rating}★")
-                        if total:
-                            rating_bits.append(f"{total} reviews")
-                        if rating_bits:
-                            parts.append(", ".join(rating_bits))
-
-                        if dist is not None:
-                            parts.append(f"{dist} km away")
-
-                        if addr:
-                            parts.append(addr)
-
-                        # One short paragraph per restaurant, followed by a blank line
-                        lines.append(" ".join(parts))
-                        lines.append("")
-
-                    lines.append(
-                        "For more options and photos, open the Find Food page and search with a similar craving and your location."
-                    )
-                    reply = "\n".join(lines)
-                    return jsonify({"reply": reply})
-
-                # No results but everything else worked
-                reply = (
-                    "I could not find any restaurants near you for that query. "
-                    "Try a broader craving or different cuisine in the Find Food page."
-                )
+                # Use the whole message as the keyword so queries like
+                # "cheap sushi near me" still work reasonably well.
+                reply = search_and_reply(lat_f, lng_f, message, "Here are a few places near you:")
                 return jsonify({"reply": reply})
 
     # Fallback to the keyword-based AI helper

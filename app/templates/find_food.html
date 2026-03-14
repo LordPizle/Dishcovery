@@ -13,6 +13,12 @@
 
 <h1 class="page-title">Find Food Near You</h1>
 <p class="page-subtitle">What are you craving? Enter a dish or cuisine, then choose a location to search near.</p>
+<div class="preset-row">
+    <button type="button" class="preset-pill" data-keyword="cheap eats">Cheap eats</button>
+    <button type="button" class="preset-pill" data-keyword="date night" data-min-rating="4.0">Date night</button>
+    <button type="button" class="preset-pill" data-keyword="family friendly">Family friendly</button>
+    <button type="button" class="preset-pill" data-keyword="open now" data-open-now="1">Open now</button>
+</div>
 
 <form id="foodForm" method="POST" class="form-card">
     <label for="keyword">What are you craving?</label>
@@ -54,6 +60,21 @@
                 <option value="{{ c }}" {% if (count | default(10)) == c %}selected{% endif %}>{{ c }}</option>
                 {% endfor %}
             </select>
+        </div>
+        <div class="filter-group">
+            <label for="min_rating">Minimum rating</label>
+            <select id="min_rating" name="min_rating">
+                <option value="" {% if not min_rating %}selected{% endif %}>Any</option>
+                <option value="3.5" {% if min_rating == 3.5 %}selected{% endif %}>3.5+</option>
+                <option value="4.0" {% if min_rating == 4.0 %}selected{% endif %}>4.0+</option>
+                <option value="4.5" {% if min_rating == 4.5 %}selected{% endif %}>4.5+</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="open_now_only" name="open_now_only" value="1" {% if open_now_only %}checked{% endif %}>
+                <span>Open now only</span>
+            </label>
         </div>
     </div>
     <input type="hidden" id="lat" name="lat">
@@ -253,6 +274,27 @@ document.getElementById('filter-toggle').addEventListener('click', function() {
     var panel = document.getElementById('filter-panel');
     panel.classList.toggle('hidden');
     this.setAttribute('aria-expanded', !panel.classList.contains('hidden'));
+});
+
+document.querySelectorAll('.preset-pill').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var kw = this.getAttribute('data-keyword') || '';
+        var minR = this.getAttribute('data-min-rating');
+        var openNow = this.getAttribute('data-open-now') === '1';
+        var keywordInput = document.getElementById('keyword');
+        var minRatingSelect = document.getElementById('min_rating');
+        var openNowCheckbox = document.getElementById('open_now_only');
+        if (keywordInput) {
+            keywordInput.value = kw;
+            keywordInput.focus();
+        }
+        if (minRatingSelect && minR) {
+            minRatingSelect.value = minR;
+        }
+        if (openNowCheckbox) {
+            openNowCheckbox.checked = openNow;
+        }
+    });
 });
 </script>
 {% endblock %}

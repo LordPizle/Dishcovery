@@ -1,11 +1,12 @@
 import os
+import re
 import requests
 import math
 
 GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")
 
 def haversine_distance(lat1, lon1, lat2, lon2):
-    
+
     R = 6371
 
     lat1 = float(lat1)
@@ -114,33 +115,53 @@ def geocode_address(address):
         return (float(lat), float(lng))
     return None
 
-def search_nearby_restaurants(lat, lng, keyword, radius_km=5, limit=10):
+
+def _clean_keyword(keyword: str) -> str:
+    """Remove obvious location phrases so only the food part is sent to Places."""
+    if not keyword:
+        return ""
+    text = str(keyword)
+    text = re.sub(r"\b(near me|around me|around here|nearby|close by)\b", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text or str(keyword).strip()
+
+
+def search_nearby_restaurants(lat, lng, keyword, radius_km=5, limit=10, min_rating=None, open_now_only=False):
 
     if not GOOGLE_PLACES_API_KEY:
-        return {"error": "Google Places API key not found. Set the environment variable."}
+        return {"error": "Restaurant search is temporarily unavailable. Please try again later."}
 
     radius_m = int(radius_km * 1000)
     limit = max(1, min(20, int(limit)))
 
     nearby_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+    cleaned_keyword = _clean_keyword(keyword)
 
     params = {
         "location": f"{lat},{lng}",
         "radius": radius_m,
         "type": "restaurant",
-        "keyword": keyword,
-        "key": GOOGLE_PLACES_API_KEY
+        "keyword": cleaned_keyword,
+        "key": GOOGLE_PLACES_API_KEY,
     }
 
     try:
         response = requests.get(nearby_url, params=params, timeout=10)
         data = response.json()
     except (requests.RequestException, ValueError):
-        return {"error": "Unable to fetch results. Please try again later."}
+        return {"error": "Unable to fetch results right now. Please try again later."}
 
     status = data.get("status", "")
-    if status != "OK" and status != "ZERO_RESULTS":
-        return {"error": data.get("error_message", "Search failed. Please try again.")}
+    if status == "ZERO_RESULTS":
+        return []
+    if status != "OK":
+        if status in ("REQUEST_DENIED", "INVALID_REQUEST"):
+            msg = "Restaurant search is not available at the moment. Please try again later."
+        elif status in ("OVER_QUERY_LIMIT", "RESOURCE_EXHAUSTED"):
+            msg = "We have reached our search limit for now. Please try again in a little while."
+        else:
+            msg = "Search failed. Please try again."
+        return {"error": msg}
 
     restaurants = []
 
@@ -167,5 +188,18 @@ def search_nearby_restaurants(lat, lng, keyword, radius_km=5, limit=10):
             "photo_urls": photo_urls,
         }
         restaurants.append(restaurant)
+
+    if min_rating is not None:
+        try:
+            threshold = float(min_rating)
+            restaurants = [
+                r for r in restaurants
+                if r.get("rating") is not None and float(r["rating"]) >= threshold
+            ]
+        except (TypeError, ValueError):
+            pass
+
+    if open_now_only:
+        restaurants = [r for r in restaurants if r.get("open_now") is True]
 
     return restaurants
