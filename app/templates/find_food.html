@@ -85,7 +85,15 @@
 
 {% if results %}
     <h2 class="results-header">Restaurants serving "{{ keyword }}" near you</h2>
-    <div class="card-container">
+    <div class="results-toolbar">
+        <label for="sort-results" class="sort-label">Sort by</label>
+        <select id="sort-results" class="sort-select" data-keyword="{{ keyword }}" data-lat="{{ result_lat }}" data-lng="{{ result_lng }}" data-distance="{{ distance }}" data-count="{{ count }}" data-min-rating="{{ min_rating or '' }}" data-open-now="{{ '1' if open_now_only else '' }}">
+            <option value="distance" {% if sort == 'distance' %}selected{% endif %}>Distance</option>
+            <option value="rating" {% if sort == 'rating' %}selected{% endif %}>Rating</option>
+            <option value="best_match" {% if sort == 'best_match' %}selected{% endif %}>Best match</option>
+        </select>
+    </div>
+    <div id="find-food-results" class="card-container">
         {% for r in results %}
         <div class="card">
             <div class="photo-row">
@@ -119,6 +127,17 @@
             </div>
         </div>
         {% endfor %}
+    </div>
+    {% if result_lat is not none and result_lng is not none %}
+    <p class="search-again-wrap">
+        <a href="/find-food?lat={{ result_lat }}&lng={{ result_lng }}&use_location=1" class="search-again-link">Search again with this location</a>
+    </p>
+    {% endif %}
+{% elif no_results_from_filters %}
+    <div class="empty-state" id="find-food-results">
+        <span class="empty-icon">🔍</span>
+        <h3>No places match your filters</h3>
+        <p>Try lowering the minimum rating or turning off "Open now only".</p>
     </div>
 {% elif request.method == 'POST' and not error %}
     <div class="empty-state">
@@ -270,11 +289,93 @@ var locType = document.querySelector('input[name="location_type"]:checked');
 if (locType && locType.value === 'current') {
     document.getElementById('address-wrap').style.display = 'none';
 }
-document.getElementById('filter-toggle').addEventListener('click', function() {
+(function filterPanelState() {
+    var key = 'findFoodFiltersOpen';
     var panel = document.getElementById('filter-panel');
-    panel.classList.toggle('hidden');
-    this.setAttribute('aria-expanded', !panel.classList.contains('hidden'));
-});
+    var toggleBtn = document.getElementById('filter-toggle');
+    if (!panel || !toggleBtn) return;
+    try {
+        if (sessionStorage.getItem(key) === '1') {
+            panel.classList.remove('hidden');
+            toggleBtn.setAttribute('aria-expanded', 'true');
+        }
+    } catch (e) {}
+    toggleBtn.addEventListener('click', function() {
+        panel.classList.toggle('hidden');
+        toggleBtn.setAttribute('aria-expanded', !panel.classList.contains('hidden'));
+        try {
+            sessionStorage.setItem(key, panel.classList.contains('hidden') ? '0' : '1');
+        } catch (e) {}
+    });
+})();
+
+(function sortResults() {
+    var sel = document.getElementById('sort-results');
+    if (!sel) return;
+    sel.addEventListener('change', function() {
+        var lat = this.getAttribute('data-lat');
+        var lng = this.getAttribute('data-lng');
+        var keyword = this.getAttribute('data-keyword') || '';
+        var distance = this.getAttribute('data-distance') || '5';
+        var count = this.getAttribute('data-count') || '10';
+        var minRating = this.getAttribute('data-min-rating') || '';
+        var openNow = this.getAttribute('data-open-now') || '';
+        var params = new URLSearchParams();
+        if (keyword) params.set('keyword', keyword);
+        if (lat) params.set('lat', lat);
+        if (lng) params.set('lng', lng);
+        params.set('distance', distance);
+        params.set('count', count);
+        if (minRating) params.set('min_rating', minRating);
+        if (openNow) params.set('open_now_only', openNow);
+        params.set('sort', this.value);
+        window.location = '/find-food?' + params.toString();
+    });
+})();
+
+(function saveLoadLocation() {
+    var form = document.getElementById('foodForm');
+    var addressInput = document.getElementById('address');
+    var latInput = document.getElementById('lat');
+    var lngInput = document.getElementById('lng');
+    var addressWrap = document.getElementById('address-wrap');
+    var useCurrentRadio = document.querySelector('input[name="location_type"][value="current"]');
+    var addressRadio = document.querySelector('input[name="location_type"][value="address"]');
+    if (!form) return;
+
+    var hasResults = document.getElementById('find-food-results') && document.querySelector('.card-container');
+    if (hasResults && addressInput && latInput && lngInput) {
+        try {
+            var useCurrent = document.getElementById('use_current').value === '1';
+            sessionStorage.setItem('findFoodLocationType', useCurrent ? 'current' : 'address');
+            if (!useCurrent && addressInput.value) {
+                sessionStorage.setItem('findFoodLastAddress', addressInput.value);
+            }
+        } catch (e) {}
+    }
+
+    try {
+        var savedType = sessionStorage.getItem('findFoodLocationType');
+        var savedAddress = sessionStorage.getItem('findFoodLastAddress');
+        if (savedAddress && addressInput && addressRadio) {
+            addressInput.value = savedAddress;
+            addressRadio.checked = true;
+            if (addressWrap) addressWrap.style.display = 'block';
+        } else if (savedType === 'current' && useCurrentRadio) {
+            useCurrentRadio.checked = true;
+            if (addressWrap) addressWrap.style.display = 'none';
+        }
+    } catch (e) {}
+
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('use_location') === '1' && params.get('lat') && params.get('lng')) {
+        latInput.value = params.get('lat');
+        lngInput.value = params.get('lng');
+        document.getElementById('use_current').value = '1';
+        if (useCurrentRadio) useCurrentRadio.checked = true;
+        if (addressWrap) addressWrap.style.display = 'none';
+    }
+})();
 
 document.querySelectorAll('.preset-pill').forEach(function(btn) {
     btn.addEventListener('click', function() {
@@ -293,6 +394,11 @@ document.querySelectorAll('.preset-pill').forEach(function(btn) {
         }
         if (openNowCheckbox) {
             openNowCheckbox.checked = openNow;
+        }
+        if ((minR || openNow) && document.getElementById('filter-panel')) {
+            var panel = document.getElementById('filter-panel');
+            panel.classList.remove('hidden');
+            document.getElementById('filter-toggle').setAttribute('aria-expanded', 'true');
         }
     });
 });

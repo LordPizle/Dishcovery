@@ -71,7 +71,20 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-        .then(function(r) { return r.json(); })
+        .then(function(r) {
+          return r.json().then(function(data) {
+            if (!r.ok) {
+              var msg = r.status === 429 ? (data.reply || 'Too many messages. Please wait a minute and try again.') : (data.reply || 'Something went wrong.');
+              if (thisTypingBubble && thisTypingBubble.parentNode) {
+                thisTypingBubble.parentNode.removeChild(thisTypingBubble);
+              }
+              pendingBotMessage = null;
+              addMessage(msg, false, false);
+              throw new Error('request failed');
+            }
+            return data;
+          });
+        })
         .then(function(data) {
           var reply = data.reply || 'Something went wrong.';
           var elapsed = Date.now() - typingStartTime;
@@ -88,7 +101,8 @@
             update();
           }
         })
-        .catch(function() {
+        .catch(function(err) {
+          if (err && err.message === 'request failed') return;
           var msg = 'Could not reach the server. Please try again.';
           var elapsed = Date.now() - typingStartTime;
           var update = function() {
@@ -148,6 +162,24 @@
   if (input) {
     input.addEventListener('keypress', function(e) {
       if (e.key === 'Enter') sendMessage();
+    });
+  }
+
+  document.querySelectorAll('.chat-chip').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var msg = this.getAttribute('data-message');
+      if (msg) {
+        input.value = msg;
+        sendMessage();
+      }
+    });
+  });
+
+  var clearBtn = document.getElementById('chat-clear');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function() {
+      messages.innerHTML = '';
+      addMessage(WELCOME, false, false);
     });
   }
 })();

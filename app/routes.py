@@ -1,11 +1,18 @@
 import re
+import time
 import requests
 from urllib.parse import urlencode
 from flask import Blueprint, render_template, request, jsonify, session
 from .location import search_nearby_restaurants, geocode_address
 from .chat import get_ai_response
+from .recommender import rerank_restaurants_by_query
 
 main_bp = Blueprint("main", __name__)
+
+# In-memory rate limit for /api/chat: 30 requests per 60 seconds per IP
+_chat_rate_limit = {}
+_RATE_LIMIT_WINDOW = 60
+_RATE_LIMIT_MAX = 30
 
 
 @main_bp.route("/")
@@ -24,12 +31,13 @@ def find_food():
     open_now_only = False
     address = ""
     use_current = False
+    sort = "distance"
 
     lat = None
     lng = None
 
     def _parse_filters(source):
-        nonlocal distance, count, min_rating, open_now_only
+        nonlocal distance, count, min_rating, open_now_only, sort
         try:
             distance = max(1, min(20, int(source.get("distance", distance) or distance)))
         except (ValueError, TypeError):
@@ -46,6 +54,9 @@ def find_food():
                 min_rating = None
         ono = source.get("open_now_only")
         open_now_only = bool(str(ono) == "1" or ono is True)
+        s = source.get("sort")
+        if s in ("distance", "rating", "best_match"):
+            sort = s
 
     if request.method == "POST":
         form = request.form
@@ -91,6 +102,31 @@ def find_food():
                 error = results["error"]
                 results = None
 
+    # Apply sort when we have a list of results
+    if results and not isinstance(results, dict):
+        if sort == "rating":
+            results = sorted(
+                results,
+                key=lambda r: (r.get("rating") is None, -(r.get("rating") or 0)),
+            )
+        elif sort == "distance":
+            results = sorted(
+                results,
+                key=lambda r: (r.get("distance_km") is None, (r.get("distance_km") or 999)),
+            )
+        elif sort == "best_match":
+            results = rerank_restaurants_by_query(results, keyword)
+
+    filters_used = bool(min_rating is not None or open_now_only)
+    no_results_from_filters = (
+        not error
+        and results is not None
+        and len(results) == 0
+        and filters_used
+    )
+    result_lat = float(lat) if lat is not None and results and not isinstance(results, dict) else None
+    result_lng = float(lng) if lng is not None and results and not isinstance(results, dict) else None
+
     # Stores the last search in the session
     if results and not isinstance(results, dict) and lat is not None and lng is not None:
         try:
@@ -114,6 +150,11 @@ def find_food():
         open_now_only=open_now_only,
         address=address,
         use_current=use_current,
+        sort=sort,
+        result_lat=result_lat,
+        result_lng=result_lng,
+        no_results_from_filters=no_results_from_filters,
+        filters_used=filters_used,
     )
 
 
@@ -173,8 +214,22 @@ def address_search():
         return jsonify([])
 
 
+def _chat_rate_limit_check():
+    ip = request.remote_addr or "unknown"
+    now = time.time()
+    if ip not in _chat_rate_limit:
+        _chat_rate_limit[ip] = []
+    _chat_rate_limit[ip] = [t for t in _chat_rate_limit[ip] if now - t < _RATE_LIMIT_WINDOW]
+    if len(_chat_rate_limit[ip]) >= _RATE_LIMIT_MAX:
+        return False
+    _chat_rate_limit[ip].append(now)
+    return True
+
+
 @main_bp.route("/api/chat", methods=["POST"])
 def api_chat():
+    if not _chat_rate_limit_check():
+        return jsonify({"reply": "Too many messages. Please wait a minute and try again."}), 429
     data = request.get_json() or {}
     message = (data.get("message", "") or "").strip()
     if not message:
@@ -242,6 +297,7 @@ def api_chat():
                 results["error"]
                 + " You can also try the Find Food page with your craving and location."
             )
+        results = rerank_restaurants_by_query(results, search_keyword)
         return format_restaurant_reply(results, header_line, search_keyword, lat_val, lng_val)
 
     # If the user is searching for a city, search for restaurants in that city

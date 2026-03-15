@@ -516,8 +516,51 @@ body > main {
   font-size: 1.2rem;
   font-weight: 600;
   color: var(--gray-800);
-  margin: 0 0 24px;
+  margin: 0 0 12px;
   padding-top: 8px;
+}
+
+.results-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.sort-label {
+  font-weight: 600;
+  color: var(--gray-800);
+  font-size: 0.9rem;
+}
+
+.sort-select {
+  padding: 8px 12px;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  background: var(--white);
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: var(--blue-500);
+}
+
+.search-again-wrap {
+  margin: 20px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--gray-200);
+}
+
+.search-again-link {
+  color: var(--blue-600);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.search-again-link:hover {
+  color: var(--blue-700);
+  text-decoration: underline;
 }
 
 .card-container {
@@ -831,6 +874,26 @@ body > main {
   font-weight: 600;
 }
 
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chat-clear {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: white;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.chat-clear:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 .chat-close {
   background: none;
   border: none;
@@ -844,6 +907,31 @@ body > main {
 
 .chat-close:hover {
   opacity: 1;
+}
+
+.chat-chips {
+  padding: 8px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.chat-chip {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border: 1px solid var(--gray-200);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--gray-700);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.chat-chip:hover {
+  background: var(--blue-50);
+  border-color: var(--blue-200);
+  color: var(--blue-700);
 }
 
 .chat-messages {

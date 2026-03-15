@@ -46,7 +46,15 @@
         <div id="chat-panel" class="chat-panel hidden">
             <div class="chat-header">
                 <h3>Dishcovery AI</h3>
-                <button id="chat-close" class="chat-close" aria-label="Close chat">&times;</button>
+                <div class="chat-header-actions">
+                    <button type="button" id="chat-clear" class="chat-clear" aria-label="Clear chat">Clear</button>
+                    <button id="chat-close" class="chat-close" aria-label="Close chat">&times;</button>
+                </div>
+            </div>
+            <div class="chat-chips">
+                <button type="button" class="chat-chip" data-message="Pizza near me">Pizza near me</button>
+                <button type="button" class="chat-chip" data-message="Vegan options">Vegan options</button>
+                <button type="button" class="chat-chip" data-message="Breakfast">Breakfast</button>
             </div>
             <div id="chat-messages" class="chat-messages"></div>
             <div class="chat-input-wrap">
