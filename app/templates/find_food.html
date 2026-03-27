@@ -5,22 +5,38 @@
 {% block og_title %}Find Food Near You - Dishcovery{% endblock %}
 {% block og_description %}Search restaurants by dish or cuisine. Enter what you're craving and your location to find the best spots near you.{% endblock %}
 {% block body_class %}find-food-page{% endblock %}
+{% block main_class %}find-food-main{% endblock %}
+{% set find_food_compact = results or no_results_from_filters or (request.method == 'POST' and not error) %}
 
 {% block content %}
+<div class="find-food-shell{% if find_food_compact %} find-food-compact{% endif %}">
+{% if not results %}
+<div class="find-food-hero-stage">
+    <div class="find-food-hero-bg" aria-hidden="true"></div>
+    <div class="find-food-hero-center">
 {% if error %}
-    <div class="alert alert-error" role="alert">{{ error }}</div>
+    <div class="find-food-alert"><div class="alert alert-error" role="alert">{{ error }}</div></div>
 {% endif %}
 
-<h1 class="page-title">Find Food Near You</h1>
-<p class="page-subtitle">What are you craving? Enter a dish or cuisine, then choose a location to search near.</p>
-<div class="preset-row">
-    <button type="button" class="preset-pill" data-keyword="cheap eats">Cheap eats</button>
-    <button type="button" class="preset-pill" data-keyword="date night" data-min-rating="4.0">Date night</button>
-    <button type="button" class="preset-pill" data-keyword="family friendly">Family friendly</button>
-    <button type="button" class="preset-pill" data-keyword="open now" data-open-now="1">Open now</button>
-</div>
+    <div class="find-food-hero-layout">
+        {% if not find_food_compact %}
+        <div class="find-food-hero-copy">
+            <p class="find-food-eyebrow">Restaurant search</p>
+            <h1 class="page-title" id="find-food-heading">Find food near you</h1>
+            <p class="page-subtitle">Tell us what you’re craving and where to look. We’ll match restaurants by name, cuisine and relevance to your search.</p>
+            <div class="preset-row find-food-presets">
+                <button type="button" class="preset-pill" data-keyword="cheap eats">Cheap eats</button>
+                <button type="button" class="preset-pill" data-keyword="date night" data-min-rating="4.0">Date night</button>
+                <button type="button" class="preset-pill" data-keyword="family friendly">Family friendly</button>
+                <button type="button" class="preset-pill" data-keyword="open now" data-open-now="1">Open now</button>
+            </div>
+            <a href="/" class="find-food-back-hero find-food-back-desktop">← Back to Home</a>
+        </div>
+        {% endif %}
 
-<form id="foodForm" method="POST" class="form-card">
+        <section class="find-food-panel" aria-labelledby="find-food-heading">
+            <div class="find-food-form-wrap">
+    <form id="foodForm" method="POST" class="form-card">
     <label for="keyword">What are you craving?</label>
     <input type="text" id="keyword" name="keyword" value="{{ keyword }}" placeholder="e.g. pizza, sushi, vegan, tacos" required>
     <div class="location-section">
@@ -80,9 +96,18 @@
     <input type="hidden" id="lat" name="lat">
     <input type="hidden" id="lng" name="lng">
     <input type="hidden" id="use_current" name="use_current" value="0">
-    <button type="submit" id="search-btn" class="search-btn">Search</button>
-</form>
+    <button type="submit" id="search-btn" class="search-btn find-food-submit">Search restaurants</button>
+    </form>
+            </div>
+        </section>
+    </div>
+        <a href="/" class="find-food-back-hero find-food-back-mobile">← Back to Home</a>
+    </div>
+</div>
+{% endif %}
 
+{% if find_food_compact %}
+<div class="find-food-below">
 {% if results %}
     <h2 class="results-header">Restaurants serving "{{ keyword }}" near you</h2>
     <div class="results-toolbar">
@@ -148,6 +173,9 @@
 {% endif %}
 
 <a href="/" class="back-link">← Back to Home</a>
+</div>
+{% endif %}
+</div>
 
 <div id="lightbox" class="lightbox hidden" onclick="closeLightbox()" role="dialog" aria-modal="true" aria-label="Image preview">
     <button type="button" class="lightbox-close" onclick="closeLightbox()" aria-label="Close">&times;</button>

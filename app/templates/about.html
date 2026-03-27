@@ -9,26 +9,34 @@
 {% block content %}
 <div class="about-content">
     <h1 class="page-title">About Dishcovery</h1>
-    <p class="about-lead">Your AI-powered food recommendation system. Find restaurants near you based on what you crave.</p>
+    <p class="about-lead">Dishcovery helps you find restaurants based on what you are craving and where you want to eat. Search by dish or cuisine, use your location or an address and get practical results fast.</p>
     <div class="about-section">
         <h2>How it works</h2>
         <ol class="about-steps">
-            <li><strong>Search</strong> – Enter what you're craving (pizza, sushi, vegan, etc.)</li>
-            <li><strong>Location</strong> – Allow location access so we can find spots near you</li>
-            <li><strong>Discover</strong> – Browse results with photos, ratings and opening hours</li>
+            <li><strong>Search your craving</strong> - Enter a dish or cuisine (for example: pizza, sushi, vegan, tacos).</li>
+            <li><strong>Choose where to search</strong> - Use your current location or enter an address or city.</li>
+            <li><strong>Refine with filters</strong> - Adjust distance, number of results, minimum rating and open now.</li>
+            <li><strong>Pick a place</strong> - Compare photos, ratings, opening status and distance then open it in Google Maps.</li>
         </ol>
     </div>
     <div class="about-section">
-        <h2>How we recommend</h2>
-        <p>We use your craving and your location to find nearby places. Your search term is matched against restaurant names, types and addresses so the results fit what you want. You can sort by distance, rating or best match. The chat assistant uses the same logic: tell it what you fancy and, if you share your location, it can suggest specific restaurants near you or in a city you name.</p>
+        <h2>How ranking works</h2>
+        <p>Dishcovery supports three sort modes: <strong>Distance</strong>, <strong>Rating</strong>, and <strong>Best match</strong>. Best match uses a text-based recommender that compares your query with restaurant information and ranks results by relevance.</p>
+        <p>Under the hood, Best match uses <strong>TF-IDF</strong> and <strong>cosine similarity</strong> with query expansion for related terms (for example, matching "ramen" with noodle or Japanese places). Relevance is combined with distance and rating to produce practical results.</p>
     </div>
     <div class="about-section">
-        <h2>AI Chat Assistant</h2>
-        <p>Click the chat icon in the corner to ask our AI about cuisines, dishes or dietary preferences. Get instant food recommendations and tips.</p>
+        <h2>Chat assistant</h2>
+        <p>The chat assistant is quick and practical. You can ask about cuisines, diets and ideas (for example: "vegan options" or "date night").</p>
+        <p>It can also trigger real searches such as "pizza in Manchester" or "sushi near me", then return restaurant suggestions using the same ranking logic as Find Food.</p>
     </div>
     <div class="about-section">
-        <h2>Powered by</h2>
-        <p>Dishcovery uses Google Places to find restaurants. Location data is used only to show nearby results and is not stored.</p>
+        <h2>Data and sources</h2>
+        <p>Restaurant data comes from <strong>Google Places</strong>. Address lookups use geocoding so city and address searches work smoothly.</p>
+        <p>Location is used only to answer your current search and improve nearby recommendations.</p>
+    </div>
+    <div class="about-section">
+        <h2>What Dishcovery does not do</h2>
+        <p>Dishcovery does not place orders or handle delivery payments. It focuses on helping you decide where to eat and then takes you to Maps to continue.</p>
     </div>
     <a href="/find-food" class="cta-button">Find Food Near Me</a>
 </div>

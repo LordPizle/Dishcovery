@@ -18,12 +18,11 @@
             <nav class="nav-links">
                 <a href="/find-food" class="nav-link {% if request.endpoint == 'main.find_food' %}active{% endif %}">Find Food</a>
                 <a href="/about" class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}">About</a>
-                <a href="/find-food" class="nav-link primary">Get Started</a>
             </nav>
         </div>
     </header>
 
-    <main class="app-container">
+    <main class="{% block main_class %}app-container{% endblock %}">
         {% block content %}{% endblock %}
     </main>
 
@@ -48,6 +47,7 @@
                 <h3>Dishcovery AI</h3>
                 <div class="chat-header-actions">
                     <button type="button" id="chat-clear" class="chat-clear" aria-label="Clear chat">Clear</button>
+                    <button type="button" id="chat-fullscreen" class="chat-fullscreen" aria-label="Enter fullscreen">⤢</button>
                     <button id="chat-close" class="chat-close" aria-label="Close chat">&times;</button>
                 </div>
             </div>

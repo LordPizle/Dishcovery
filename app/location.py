@@ -6,7 +6,7 @@ import math
 GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")
 
 def haversine_distance(lat1, lon1, lat2, lon2):
-
+    # Straight-line distance used only for quick sorting/display.
     R = 6371
 
     lat1 = float(lat1)
@@ -51,8 +51,11 @@ def get_place_photos(place_id, max_photos=5):
         "key": GOOGLE_PLACES_API_KEY,
     }
 
-    resp = requests.get(details_url, params=params)
-    data = resp.json()
+    try:
+        resp = requests.get(details_url, params=params, timeout=10)
+        data = resp.json()
+    except (requests.RequestException, ValueError):
+        return []
 
     photos = data.get("result", {}).get("photos", [])
     photo_urls = []
@@ -134,6 +137,7 @@ def search_nearby_restaurants(lat, lng, keyword, radius_km=5, limit=10, min_rati
     radius_m = int(radius_km * 1000)
     limit = max(1, min(20, int(limit)))
 
+    # Keep query focused on food intent, not location phrasing.
     nearby_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
     cleaned_keyword = _clean_keyword(keyword)
 
@@ -172,6 +176,7 @@ def search_nearby_restaurants(lat, lng, keyword, radius_km=5, limit=10, min_rati
         distance_km = haversine_distance(lat, lng, pl[0], pl[1]) if all(p is not None for p in pl) else None
 
         photo_urls = get_place_photos(place_id, max_photos=3)
+        # Keep card rendering stable when a place has no image.
         while len(photo_urls) < 1:
             photo_urls.append(None)
         photo_urls = photo_urls[:3]

@@ -38,6 +38,7 @@ def find_food():
 
     def _parse_filters(source):
         nonlocal distance, count, min_rating, open_now_only, sort
+        # Clamp user-supplied filters so invalid values do not break search.
         try:
             distance = max(1, min(20, int(source.get("distance", distance) or distance)))
         except (ValueError, TypeError):
@@ -187,6 +188,7 @@ def address_search():
         resp.raise_for_status()
         data = resp.json()
         results = []
+        # Normalize Photon responses to one display shape for the autocomplete UI.
         for f in data.get("features", [])[:8]:
             props = f.get("properties", {})
             coords = f.get("geometry", {}).get("coordinates", [])
@@ -219,6 +221,7 @@ def _chat_rate_limit_check():
     now = time.time()
     if ip not in _chat_rate_limit:
         _chat_rate_limit[ip] = []
+    # Rolling window: keep only timestamps within the configured limit period.
     _chat_rate_limit[ip] = [t for t in _chat_rate_limit[ip] if now - t < _RATE_LIMIT_WINDOW]
     if len(_chat_rate_limit[ip]) >= _RATE_LIMIT_MAX:
         return False
@@ -291,6 +294,7 @@ def api_chat():
         return "\n".join(lines)
 
     def search_and_reply(lat_val, lng_val, search_keyword, header_line):
+        # Reuse same restaurant pipeline as Find Food so chat results stay consistent.
         results = search_nearby_restaurants(lat_val, lng_val, search_keyword, radius_km=5, limit=5)
         if isinstance(results, dict) and "error" in results:
             return (

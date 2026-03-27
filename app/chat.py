@@ -1,6 +1,7 @@
 import re
 import random
 
+# Lightweight keyword/pattern chat assistant (no external LLM calls).
 # Cuisine and dish keywords with helpful, specific replies
 FOOD_KEYWORDS = {
     "pizza": "Pizza is a great choice! Search for 'pizza' on Find Food to discover nearby pizzerias. Try margherita, pepperoni or a wood-fired option.",
@@ -38,7 +39,7 @@ FOOD_KEYWORDS = {
     "wings": "Wings and game day! Search 'wings' on Find Food for places that do buffalo, BBQ or other wing styles.",
     "sandwich": "Sandwich spot? Search 'sandwich' or 'deli' on Find Food for subs, paninis and delis.",
     "salad": "Light and fresh! Search 'salad' on Find Food for places with great salad options.",
-    "soup": "Soup weather! Search 'soup' on Find Food for pho, ramen, and classic soup spots.",
+    "soup": "Soup weather! Search 'soup' on Find Food for pho, ramen and classic soup spots.",
     "dim sum": "Dim sum is perfect for sharing! Search 'dim sum' or 'Chinese' on Find Food for dumplings and small plates.",
     "pad thai": "Pad thai is a classic! Search 'pad thai' or 'Thai' on Find Food for Thai restaurants near you.",
     "pho": "Pho hits the spot! Search 'pho' or 'Vietnamese' on Find Food for noodle soup spots.",
@@ -190,7 +191,7 @@ RECOMMEND_RESPONSES = [
 ]
 NEAR_ME_RESPONSES = [
     "To find food near you, go to Find Food and choose 'Use my current location', then enter what you're craving (e.g. pizza, Thai). We'll show nearby restaurants with ratings and distance.",
-    "Use Find Food, select 'Use my current location', and type your craving. You'll get a list of places near you with photos and opening hours.",
+    "Use Find Food, select 'Use my current location' and type your craving. You'll get a list of places near you with photos and opening hours.",
     "Find Food with 'Use my current location' and your craving (pizza, sushi, whatever you fancy). You'll see nearby spots with distance and opening status.",
 ]
 WHAT_TO_EAT_RESPONSES = [
@@ -286,7 +287,7 @@ def get_ai_response(message: str) -> str:
     if re.search(r"\b(in|near)\s+(london|nyc|new york|manchester|birmingham|leeds|glasgow|edinburgh|dublin|paris|berlin|amsterdam|tokyo|sydney|la|los angeles|bristol|liverpool|sheffield|belfast|cardiff|cambridge|oxford|brighton|boston|chicago|miami|san francisco|sf|seattle|toronto|vancouver|melbourne|auckland|singapore|hong kong|dubai|madrid|barcelona|rome|milan|munich|copenhagen|stockholm|oslo|brussels|vienna|prague|lisbon|athens|istanbul|mumbai|delhi|bangkok|seoul)\b", text):
         return random.choice(LOCATION_RESPONSES)
 
-    # Food keywords (cuisines, dishes, diets)
+    # Food keywords (cuisines, dishes, diets) are checked after intent patterns.
     for keyword, response in FOOD_KEYWORDS.items():
         if keyword in text:
             return response
